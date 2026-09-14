@@ -6,6 +6,7 @@
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/semphr.h"
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
 #include "driver/uart.h"
@@ -43,7 +44,15 @@ static const gpio_num_t cols[] = {22, 25, 26, 27};
 #define TFT_W            128
 #define TFT_H            160
 #define RFID_UID_LEN     4    /* Bản này dành cho thẻ MIFARE UID 4 byte. */
-#define FINGER_ID_MAX    1000 /* Phù hợp phần lớn AS608 có 1000 template. */
+
+/* Mã confirmation trong giao thức AS608/R30x. */
+#define AS608_OK         0x00
+#define AS608_NO_FINGER  0x02
+#define AS608_NO_MATCH   0x09
+
+/* Nếu quá trình đăng ký (bấm B) không hoàn tất trong thời gian này thì tự hủy,
+ * tránh khóa vĩnh viễn chức năng chấm công nếu admin bỏ đi giữa chừng. */
+#define ENROLL_TIMEOUT_US (60LL * 1000000LL)
 
 static const char *TAG = "ACCESS";
 static spi_device_handle_t rc522;
@@ -57,17 +66,49 @@ typedef enum {
     ENROLL_WAIT_FINGER_1,
     ENROLL_WAIT_FINGER_REMOVE,
     ENROLL_WAIT_FINGER_2,
+    ENROLL_WAIT_VERIFY_REMOVE,
+    ENROLL_WAIT_VERIFY,
 } enroll_state_t;
 
-/* Các biến này chỉ được thay đổi theo từng task operation nguyên tử trên ESP32. */
-static volatile enroll_state_t current_enroll_state = ENROLL_NONE;
-static volatile bool admin_authenticated;
+/*
+ * Mutex bảo vệ TOÀN BỘ khối trạng thái đăng ký/admin bên dưới. keypad_task ghi,
+ * rfid_task/fingerprint_task đọc và ghi - hai core khác nhau trên ESP32 nên
+ * chỉ đánh dấu volatile là không đủ để đảm bảo tính nhất quán nhiều biến liên
+ * quan với nhau (vd enroll_emp_id phải khớp với current_enroll_state).
+ */
+static SemaphoreHandle_t state_mutex;
+
+static enroll_state_t current_enroll_state = ENROLL_NONE;
+static bool admin_authenticated;
 static uint16_t enroll_emp_id;
 static uint8_t enroll_rfid_uid[RFID_UID_LEN];
 static bool enroll_rfid_pending;
+static int64_t enroll_started_us;
+/* Đọc từ cảm biến khi khởi động, không dùng hằng số đoán dung lượng. */
+static uint16_t fp_library_size = 300;
 
 static char input_buffer[12];
 static size_t input_len;
+
+#define LOCK()   xSemaphoreTake(state_mutex, portMAX_DELAY)
+#define UNLOCK() xSemaphoreGive(state_mutex)
+
+/*
+ * ============================================================================
+ * GIAO DIỆN MENU ADMIN (chỉ dùng bên trong keypad_task, KHÔNG được task nào
+ * khác đọc/ghi) - vì vậy các biến này KHÔNG cần nằm dưới state_mutex.
+ * admin_authenticated / current_enroll_state (đã có mutex ở trên) vẫn là
+ * "nguồn sự thật" cho rfid_task & fingerprint_task; admin_ui_mode chỉ là lớp
+ * hiển thị/điều hướng phím phía trên, không được hai task kia đọc tới nên
+ * không phá vỡ nguyên tắc đồng bộ hoá đã có sẵn trong code gốc.
+ * ============================================================================
+ */
+typedef enum {
+    ADMIN_UI_NONE = 0,      /* Chưa đăng nhập (đang nhập PIN hoặc màn hình chờ) */
+    ADMIN_UI_MENU,          /* Đã đăng nhập, chờ chọn B (them) hoặc D (xoa)      */
+    ADMIN_UI_ENTER_ADD_ID,  /* Đang nhập ID nhân viên cần THÊM                   */
+    ADMIN_UI_ENTER_DEL_ID,  /* Đang nhập ID nhân viên cần XOA                    */
+} admin_ui_mode_t;
 
 /* ============================== TFT ============================== */
 static void tft_cmd(uint8_t cmd, const uint8_t *param, size_t len)
@@ -143,6 +184,34 @@ static void tft_message(const char *title, const char *line1, const char *line2)
     tft_flush();
 }
 
+/*
+ * Màn hình "nhập liệu" dùng chung cho: nhập PIN admin, nhập ID thêm nhân
+ * viên, nhập ID xoá nhân viên. Hiển thị trực tiếp giá trị đang gõ trong một
+ * khung nổi bật để dễ quan sát/soát lỗi, kèm dòng hướng dẫn phím phía dưới.
+ * CHỈ THÊM MỚI - không đụng tới tft_message() / các hàm TFT phía trên.
+ */
+static void tft_input_screen(const char *title, const char *prompt,
+                              const char *value, const char *hint1,
+                              const char *hint2)
+{
+    if (!tft_io) return;
+    tft_fill(0x0010);
+    tft_box(0, 0, TFT_W, 22, 0x03E0);           /* thanh tieu de */
+    tft_text(6, 7, title, 0xffff);
+
+    tft_text(8, 34, prompt, 0xffe0);
+
+    /* khung nhap lieu noi bat */
+    tft_box(6, 52, TFT_W - 12, 18, 0x0000);
+    tft_box(6, 52, TFT_W - 12, 1, 0x07e0);
+    tft_box(6, 69, TFT_W - 12, 1, 0x07e0);
+    tft_text(10, 57, (value && *value) ? value : "-", 0x07e0);
+
+    tft_text(8, 100, hint1 ? hint1 : "", 0x07ff);
+    tft_text(8, 116, hint2 ? hint2 : "", 0x07ff);
+    tft_flush();
+}
+
 static void tft_init(void)
 {
     esp_lcd_panel_io_spi_config_t io = {
@@ -178,6 +247,19 @@ static esp_err_t save_rfid_to_nvs(const uint8_t uid[RFID_UID_LEN], uint16_t emp_
     return err;
 }
 
+static esp_err_t erase_rfid_from_nvs(const uint8_t uid[RFID_UID_LEN])
+{
+    char key[16]; rfid_key(uid, key);
+    nvs_handle_t h;
+    esp_err_t err = nvs_open("users", NVS_READWRITE, &h);
+    if (err != ESP_OK) return err;
+    err = nvs_erase_key(h, key);
+    if (err == ESP_ERR_NVS_NOT_FOUND) err = ESP_OK;
+    if (err == ESP_OK) err = nvs_commit(h);
+    nvs_close(h);
+    return err;
+}
+
 static uint16_t check_rfid_in_nvs(const uint8_t uid[RFID_UID_LEN])
 {
     char key[16]; rfid_key(uid, key);
@@ -188,6 +270,40 @@ static uint16_t check_rfid_in_nvs(const uint8_t uid[RFID_UID_LEN])
         nvs_close(h);
     }
     return emp_id;
+}
+
+/*
+ * MỚI: tra ngược UID RFID theo emp_id (namespace "users" lưu key=UID,
+ * value=emp_id nên cần duyệt toàn bộ). Dùng khi xoá nhân viên: ta chỉ có
+ * ID nhập từ bàn phím, cần tìm ra đúng thẻ RFID tương ứng để xoá triệt để.
+ * Không đụng tới các hàm NVS phía trên - chỉ đọc.
+ */
+static bool find_uid_by_emp_id(uint16_t emp_id, uint8_t uid_out[RFID_UID_LEN])
+{
+    bool found = false;
+    nvs_handle_t h;
+    if (nvs_open("users", NVS_READONLY, &h) != ESP_OK) return false;
+
+    nvs_iterator_t it = NULL;
+    esp_err_t res = nvs_entry_find(NVS_DEFAULT_PART_NAME, "users", NVS_TYPE_U16, &it);
+    while (res == ESP_OK && it != NULL) {
+        nvs_entry_info_t info;
+        nvs_entry_info(it, &info);
+        uint16_t value = 0;
+        if (nvs_get_u16(h, info.key, &value) == ESP_OK && value == emp_id) {
+            unsigned int b0 = 0, b1 = 0, b2 = 0, b3 = 0;
+            if (sscanf(info.key, "u%02x%02x%02x%02x", &b0, &b1, &b2, &b3) == 4) {
+                uid_out[0] = (uint8_t)b0; uid_out[1] = (uint8_t)b1;
+                uid_out[2] = (uint8_t)b2; uid_out[3] = (uint8_t)b3;
+                found = true;
+            }
+            break;
+        }
+        res = nvs_entry_next(&it);
+    }
+    if (it) nvs_release_iterator(it);
+    nvs_close(h);
+    return found;
 }
 
 static bool nvs_pin_ok(const char *pin)
@@ -215,9 +331,13 @@ static void log_event(const char *method, const char *id)
     }
 }
 
+/* Đọc dưới lock để có snapshot nhất quán của cả hai cờ. */
 static bool attendance_ready(void)
 {
-    return !admin_authenticated && current_enroll_state == ENROLL_NONE;
+    LOCK();
+    bool ready = !admin_authenticated && current_enroll_state == ENROLL_NONE;
+    UNLOCK();
+    return ready;
 }
 
 static void grant(const char *method, const char *id)
@@ -321,10 +441,14 @@ static bool rc522_poll(uint8_t uid[RFID_UID_LEN])
 }
 
 /* ============================== AS608 ============================== */
-static bool as608_cmd(uint8_t cmd, const uint8_t *data, size_t len,
-                      uint8_t *reply, size_t *rlen)
+/*
+ * Trả ESP_OK khi gói UART hợp lệ. Mã thành công/thất bại của AS608 nằm ở
+ * *status; không được biến mọi lỗi thành "không có ngón tay".
+ */
+static esp_err_t as608_exec(uint8_t cmd, const uint8_t *data, size_t len,
+                             uint8_t *reply, size_t *rlen, uint8_t *status)
 {
-    if (len > 20) return false;
+    if (len > 20 || !reply || !rlen || !status) return ESP_ERR_INVALID_ARG;
     uint8_t packet[32] = {0xef, 0x01, 0xff, 0xff, 0xff, 0xff, 0x01,
                           (uint8_t)((len + 3) >> 8), (uint8_t)(len + 3), cmd};
     uint16_t sum = 1 + packet[7] + packet[8] + cmd;
@@ -333,22 +457,41 @@ static bool as608_cmd(uint8_t cmd, const uint8_t *data, size_t len,
     packet[11 + len] = (uint8_t)sum;
 
     uart_flush_input(AS608_UART);
-    if (uart_write_bytes(AS608_UART, (const char *)packet, 12 + len) < 0) return false;
+    if (uart_write_bytes(AS608_UART, (const char *)packet, 12 + len) < 0)
+        return ESP_FAIL;
     uint8_t header[9];
     if (uart_read_bytes(AS608_UART, header, sizeof(header), pdMS_TO_TICKS(800)) != sizeof(header) ||
-        header[0] != 0xef || header[1] != 0x01 || header[6] != 0x07) return false;
+        header[0] != 0xef || header[1] != 0x01 || header[6] != 0x07)
+        return ESP_ERR_INVALID_RESPONSE;
 
     int body_len = ((header[7] << 8) | header[8]) - 2; /* confirmation + parameters */
-    if (body_len < 1 || body_len > (int)*rlen) return false;
+    /*
+     * FIX QUAN TRỌNG: uart_read_bytes bên dưới đọc "body_len + 2" byte (thêm
+     * 2 byte checksum) vào `reply`. Điều kiện cũ chỉ so `body_len > *rlen`
+     * nên khi body_len == *rlen (vd == 32, đúng bằng sizeof(reply[32])) thì
+     * lệnh đọc sẽ ghi 34 byte vào một mảng chỉ có 32 byte -> tràn stack.
+     * Một khung UART nhiễu (rớt dây, nhiễu điện) hoàn toàn có thể tạo ra giá
+     * trị body_len sát biên như vậy trước khi checksum được kiểm tra ở dưới.
+     */
+    if (body_len < 1 || body_len + 2 > (int)*rlen) return ESP_ERR_INVALID_SIZE;
     if (uart_read_bytes(AS608_UART, reply, body_len + 2, pdMS_TO_TICKS(500)) != body_len + 2)
-        return false;
+        return ESP_ERR_TIMEOUT;
 
     uint16_t checksum = 0;
     for (int i = 6; i < 9; ++i) checksum += header[i];
     for (int i = 0; i < body_len; ++i) checksum += reply[i];
-    if (checksum != (uint16_t)((reply[body_len] << 8) | reply[body_len + 1])) return false;
+    if (checksum != (uint16_t)((reply[body_len] << 8) | reply[body_len + 1]))
+        return ESP_ERR_INVALID_CRC;
     *rlen = body_len;
-    return reply[0] == 0x00;
+    *status = reply[0];
+    return ESP_OK;
+}
+
+static bool as608_cmd(uint8_t cmd, const uint8_t *data, size_t len,
+                      uint8_t *reply, size_t *rlen)
+{
+    uint8_t status;
+    return as608_exec(cmd, data, len, reply, rlen, &status) == ESP_OK && status == AS608_OK;
 }
 
 static bool as608_is_online(void)
@@ -356,6 +499,70 @@ static bool as608_is_online(void)
     uint8_t reply[32];
     size_t n = sizeof(reply);
     return as608_cmd(0x0f, NULL, 0, reply, &n); /* ReadSysPara */
+}
+
+static void as608_read_capacity(void)
+{
+    uint8_t reply[32], status;
+    size_t n = sizeof(reply);
+    if (as608_exec(0x0f, NULL, 0, reply, &n, &status) == ESP_OK &&
+        status == AS608_OK && n >= 17) {
+        uint16_t capacity = ((uint16_t)reply[5] << 8) | reply[6];
+        if (capacity > 0) fp_library_size = capacity;
+    }
+}
+
+/* Search phải duyệt đúng kích thước thư viện của chính cảm biến. */
+static bool as608_search(uint16_t *matched_id, uint16_t *score, uint8_t *status)
+{
+    uint8_t reply[32];
+    const uint8_t request[] = {1, 0, 0,
+                               (uint8_t)(fp_library_size >> 8),
+                               (uint8_t)fp_library_size};
+    size_t n = sizeof(reply);
+    *matched_id = 0;
+    *score = 0;
+    *status = 0xff;
+    esp_err_t err = as608_exec(0x04, request, sizeof(request), reply, &n, status);
+    if (err != ESP_OK || *status != AS608_OK || n < 5) return false;
+    *matched_id = ((uint16_t)reply[1] << 8) | reply[2];
+    *score = ((uint16_t)reply[3] << 8) | reply[4];
+    return true;
+}
+
+static void as608_delete_template(uint16_t id)
+{
+    uint8_t reply[16];
+    uint8_t request[] = {(uint8_t)(id >> 8), (uint8_t)id, 0, 1};
+    size_t n = sizeof(reply);
+    if (!as608_cmd(0x0c, request, sizeof(request), reply, &n))
+        ESP_LOGE(TAG, "Khong xoa duoc template loi ID %u", id);
+}
+
+/*
+ * MỚI: xoá triệt để một nhân viên - vân tay (AS608) + RFID (NVS), coi như
+ * thẻ RFID cũ trở thành thẻ "trắng" hoàn toàn (không còn ánh xạ tới ID nào).
+ * Chỉ gọi từ keypad_task, sau khi admin đã xác thực - không đụng tới
+ * current_enroll_state/admin_authenticated nên không cần state_mutex; các
+ * hàm con (as608_delete_template/erase_rfid_from_nvs) vốn đã được gọi không
+ * khoá ở nơi khác trong code gốc theo đúng khuôn mẫu tương tự.
+ * Trả về true nếu tìm thấy và đã xoá bản ghi RFID tương ứng với emp_id.
+ */
+static bool delete_employee(uint16_t emp_id)
+{
+    uint8_t uid[RFID_UID_LEN];
+    bool had_rfid = find_uid_by_emp_id(emp_id, uid);
+
+    as608_delete_template(emp_id); /* an toàn dù ID chưa từng có mẫu vân tay */
+
+    if (had_rfid) {
+        (void)erase_rfid_from_nvs(uid);
+    }
+
+    char id_str[8];
+    snprintf(id_str, sizeof(id_str), "%u", emp_id);
+    log_event("DEL", id_str);
+    return had_rfid;
 }
 
 /* ============================== keypad ============================== */
@@ -383,65 +590,235 @@ static char keypad_scan(void)
     return pressed;
 }
 
-static void cancel_admin_or_enrollment(void)
+/* Phải được gọi trong khi đã giữ LOCK(). */
+static void cancel_admin_or_enrollment_locked(void)
 {
+    /* Nếu đã Store nhưng chưa qua quét kiểm chứng, không để dữ liệu nửa chừng.
+     * Các lệnh AS608/NVS bên dưới không cần giữ mutex, nhưng ta chụp lại
+     * (snapshot) các giá trị cần thiết trước khi rời khỏi vùng lock nếu cần
+     * gọi I/O chậm; ở đây as608_delete_template/erase_rfid_from_nvs không
+     * đụng tới state chung nên gọi thẳng là an toàn. */
+    bool need_rollback = enroll_rfid_pending &&
+        (current_enroll_state == ENROLL_WAIT_VERIFY_REMOVE ||
+         current_enroll_state == ENROLL_WAIT_VERIFY);
+    uint16_t rollback_id = enroll_emp_id;
+    uint8_t rollback_uid[RFID_UID_LEN];
+    memcpy(rollback_uid, enroll_rfid_uid, RFID_UID_LEN);
+
     admin_authenticated = false;
     current_enroll_state = ENROLL_NONE;
     enroll_rfid_pending = false;
     enroll_emp_id = 0;
     input_len = 0;
+
+    if (need_rollback) {
+        UNLOCK();
+        as608_delete_template(rollback_id);
+        (void)erase_rfid_from_nvs(rollback_uid);
+        LOCK();
+    }
+}
+
+static void cancel_admin_or_enrollment(void)
+{
+    LOCK();
+    cancel_admin_or_enrollment_locked();
+    UNLOCK();
     tft_message("CHAM CONG", "SAN SANG", "CHO XAC THUC");
+}
+
+/* ---- Các màn hình admin mới (chỉ hiển thị - không đụng logic gốc) ---- */
+static void ui_show_pin_entry(void)
+{
+    char shown[12];
+    size_t n = input_len < sizeof(shown) - 1 ? input_len : sizeof(shown) - 1;
+    memcpy(shown, input_buffer, n); shown[n] = 0;
+    tft_input_screen("DANG NHAP ADMIN", "MA PIN:", shown,
+                      "#:XAC NHAN  C:XOA", "*:HUY");
+}
+
+static void ui_show_menu(void)
+{
+    tft_input_screen("ADMIN", "CHON CHUC NANG", "",
+                      "B: THEM NHAN VIEN", "D: XOA NHAN VIEN");
+}
+
+static void ui_show_add_id_entry(void)
+{
+    char shown[12];
+    size_t n = input_len < sizeof(shown) - 1 ? input_len : sizeof(shown) - 1;
+    memcpy(shown, input_buffer, n); shown[n] = 0;
+    tft_input_screen("THEM NHAN VIEN", "NHAP MA SO NV:", shown,
+                      "NHAN B DE HOAN TAT", "C:XOA  *:HUY");
+}
+
+static void ui_show_del_id_entry(void)
+{
+    char shown[12];
+    size_t n = input_len < sizeof(shown) - 1 ? input_len : sizeof(shown) - 1;
+    memcpy(shown, input_buffer, n); shown[n] = 0;
+    tft_input_screen("XOA NHAN VIEN", "NHAP MA SO NV:", shown,
+                      "NHAN D DE XAC NHAN", "C:XOA  *:HUY");
 }
 
 static void keypad_task(void *arg)
 {
     bool entering_master = false;
+    admin_ui_mode_t admin_ui_mode = ADMIN_UI_NONE;
+    bool prev_is_admin = false;
+
     while (true) {
         char key = keypad_scan();
         if (!key) { vTaskDelay(pdMS_TO_TICKS(20)); continue; }
         ESP_LOGI(TAG, "=> Phim duoc nhan: [%c]", key);
 
+        LOCK();
+        bool is_admin = admin_authenticated;
+        enroll_state_t enroll_now = current_enroll_state;
+        UNLOCK();
+
+        /*
+         * MỚI: nếu admin_authenticated vừa chuyển true -> false do MỘT TASK
+         * KHÁC gây ra (fingerprint_task hoàn tất/that bại đăng ký, hoặc
+         * enroll_watchdog_task hết giờ), thì lớp menu cục bộ của bàn phím
+         * phải tự đồng bộ lại về trạng thái NONE - tránh việc phím B/D/C bị
+         * "kẹt" ở một menu không còn hợp lệ. Không đụng tới bất kỳ biến dùng
+         * chung nào, chỉ reset biến cục bộ của chính keypad_task.
+         */
+        if (prev_is_admin && !is_admin) {
+            admin_ui_mode = ADMIN_UI_NONE;
+            entering_master = false;
+            input_len = 0;
+        }
+        prev_is_admin = is_admin;
+
         if (key == '*') {
             cancel_admin_or_enrollment();
             entering_master = true;
+            admin_ui_mode = ADMIN_UI_NONE;
             ESP_LOGI(TAG, "Nhap PIN admin, roi nhan #");
-            tft_message("ADMIN", "NHAP PIN", "ROI NHAN #");
-        } else if (key == 'D' && admin_authenticated) {
-            cancel_admin_or_enrollment();
-            entering_master = false;
-            ESP_LOGI(TAG, "Da thoat admin");
+            ui_show_pin_entry();
+        } else if (key == 'C') {
+            /* Backspace: chỉ có tác dụng khi đang nhập PIN hoặc ID. */
+            if ((entering_master || admin_ui_mode == ADMIN_UI_ENTER_ADD_ID ||
+                 admin_ui_mode == ADMIN_UI_ENTER_DEL_ID) && input_len > 0) {
+                input_len--;
+                if (entering_master) ui_show_pin_entry();
+                else if (admin_ui_mode == ADMIN_UI_ENTER_ADD_ID) ui_show_add_id_entry();
+                else if (admin_ui_mode == ADMIN_UI_ENTER_DEL_ID) ui_show_del_id_entry();
+            }
         } else if (key == '#') {
             input_buffer[input_len] = 0;
             if (entering_master && nvs_pin_ok(input_buffer)) {
+                LOCK();
                 admin_authenticated = true;
+                UNLOCK();
                 entering_master = false;
                 input_len = 0;
+                admin_ui_mode = ADMIN_UI_MENU;
+                prev_is_admin = true;
                 ESP_LOGI(TAG, "DANG NHAP ADMIN THANH CONG");
-                tft_message("ADMIN OK", "NHAP ID ROI B", "D DE THOAT");
+                ui_show_menu();
             } else if (entering_master) {
                 input_len = 0;
                 ESP_LOGW(TAG, "PIN admin sai");
-                tft_message("LOI", "MA PIN SAI", "THU LAI");
+                tft_message("LOI", "MA PIN SAI", "NHAN * DE THU LAI");
             }
-        } else if (key == 'B' && admin_authenticated && current_enroll_state == ENROLL_NONE && input_len) {
-            input_buffer[input_len] = 0;
-            long id = strtol(input_buffer, NULL, 10);
-            input_len = 0;
-            if (id > 0 && id < FINGER_ID_MAX) {
-                enroll_emp_id = (uint16_t)id;
-                enroll_rfid_pending = false;
-                current_enroll_state = ENROLL_WAIT_RFID;
-                ESP_LOGI(TAG, "DANG KY ID %u: QUET RFID", enroll_emp_id);
-                tft_message("THEM NHAN VIEN", "QUET THE RFID", "D DE HUY");
-            } else {
-                ESP_LOGW(TAG, "ID vân tay không hợp lệ: %ld", id);
-                tft_message("LOI", "ID 1 DEN 999", "NHAP LAI");
+        } else if (key == 'B') {
+            if (is_admin && admin_ui_mode == ADMIN_UI_MENU && enroll_now == ENROLL_NONE) {
+                /* Buoc 1: bat dau che do THEM nhan vien - chi hien man hinh,
+                 * chua dong gi den trang thai enroll dung/goc. */
+                admin_ui_mode = ADMIN_UI_ENTER_ADD_ID;
+                input_len = 0;
+                ui_show_add_id_entry();
+            } else if (is_admin && admin_ui_mode == ADMIN_UI_ENTER_ADD_ID && input_len) {
+                /* Buoc 2: da go xong ID, xac nhan bang B (dung logic goc
+                 * khoi tao enroll, khong thay doi gi ca). */
+                input_buffer[input_len] = 0;
+                long id = strtol(input_buffer, NULL, 10);
+                input_len = 0;
+                if (id > 0 && id < fp_library_size) {
+                    LOCK();
+                    enroll_emp_id = (uint16_t)id;
+                    enroll_rfid_pending = false;
+                    current_enroll_state = ENROLL_WAIT_RFID;
+                    enroll_started_us = esp_timer_get_time();
+                    UNLOCK();
+                    admin_ui_mode = ADMIN_UI_MENU;
+                    ESP_LOGI(TAG, "DANG KY ID %u: QUET RFID", (unsigned)id);
+                    tft_message("THEM NHAN VIEN", "QUET THE RFID", "D DE HUY");
+                } else {
+                    ESP_LOGW(TAG, "ID van tay ngoai dung luong %u: %ld", fp_library_size, id);
+                    tft_message("LOI", "ID NGOAI DUNG LUONG", "NHAP LAI");
+                    vTaskDelay(pdMS_TO_TICKS(1200));
+                    ui_show_add_id_entry(); /* o lai man hinh de go lai ID */
+                }
+            }
+        } else if (key == 'D') {
+            if (is_admin && admin_ui_mode == ADMIN_UI_MENU && enroll_now == ENROLL_NONE) {
+                /* Buoc 1: bat dau che do XOA nhan vien. */
+                admin_ui_mode = ADMIN_UI_ENTER_DEL_ID;
+                input_len = 0;
+                ui_show_del_id_entry();
+            } else if (is_admin && admin_ui_mode == ADMIN_UI_ENTER_DEL_ID && input_len) {
+                /* Buoc 2: da go xong ID can xoa, xac nhan bang D. */
+                input_buffer[input_len] = 0;
+                long id = strtol(input_buffer, NULL, 10);
+                input_len = 0;
+                if (id > 0 && id < fp_library_size) {
+                    bool existed = delete_employee((uint16_t)id);
+                    char id_str[12];
+                    snprintf(id_str, sizeof(id_str), "ID %ld", id);
+                    if (existed) {
+                        ESP_LOGI(TAG, "DA XOA NHAN VIEN ID %ld (RFID + van tay)", id);
+                        tft_message("DA XOA", id_str, "THE DA THANH THE MOI");
+                    } else {
+                        ESP_LOGW(TAG, "Xoa ID %ld: khong tim thay the RFID lien ket", id);
+                        tft_message("DA XOA VAN TAY", id_str, "(KHONG CO THE RFID)");
+                    }
+                    vTaskDelay(pdMS_TO_TICKS(1500));
+                    admin_ui_mode = ADMIN_UI_MENU;
+                    ui_show_menu();
+                } else {
+                    ESP_LOGW(TAG, "ID xoa ngoai dung luong %u: %ld", fp_library_size, id);
+                    tft_message("LOI", "ID NGOAI DUNG LUONG", "NHAP LAI");
+                    vTaskDelay(pdMS_TO_TICKS(1200));
+                    ui_show_del_id_entry(); /* o lai man hinh de go lai ID */
+                }
             }
         } else if (key >= '0' && key <= '9' && input_len < sizeof(input_buffer) - 1) {
-            /* Chỉ nhận số cho PIN hoặc ID admin. Ngoài admin, RFID/FP luôn sẵn sàng. */
-            if (entering_master || admin_authenticated) input_buffer[input_len++] = key;
+            /* Chi nhan so khi dang nhap PIN, hoac dang nhap ID them/xoa. */
+            if (entering_master) {
+                input_buffer[input_len++] = key;
+                ui_show_pin_entry();
+            } else if (admin_ui_mode == ADMIN_UI_ENTER_ADD_ID) {
+                input_buffer[input_len++] = key;
+                ui_show_add_id_entry();
+            } else if (admin_ui_mode == ADMIN_UI_ENTER_DEL_ID) {
+                input_buffer[input_len++] = key;
+                ui_show_del_id_entry();
+            }
         }
         vTaskDelay(pdMS_TO_TICKS(20));
+    }
+}
+
+/* Task nền: nếu admin bấm B rồi bỏ đi giữa chừng (không hoàn tất, không bấm D),
+ * hệ thống sẽ tự thoát khỏi trạng thái enroll sau ENROLL_TIMEOUT_US thay vì
+ * khóa chức năng chấm công vô thời hạn. */
+static void enroll_watchdog_task(void *arg)
+{
+    while (true) {
+        LOCK();
+        bool expired = current_enroll_state != ENROLL_NONE &&
+            (esp_timer_get_time() - enroll_started_us) > ENROLL_TIMEOUT_US;
+        UNLOCK();
+        if (expired) {
+            ESP_LOGW(TAG, "Het thoi gian dang ky, tu dong huy");
+            cancel_admin_or_enrollment();
+            tft_message("HET THOI GIAN", "DA HUY DANG KY", "SAN SANG");
+        }
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
 
@@ -452,9 +829,15 @@ static void rfid_task(void *arg)
     char id[12];
     while (true) {
         if (rc522_poll(uid)) {
-            if (current_enroll_state == ENROLL_WAIT_RFID && admin_authenticated) {
+            LOCK();
+            bool in_enroll_wait_rfid = (current_enroll_state == ENROLL_WAIT_RFID) &&
+                                        admin_authenticated;
+            uint16_t enroll_id_snapshot = enroll_emp_id;
+            UNLOCK();
+
+            if (in_enroll_wait_rfid) {
                 uint16_t existing = check_rfid_in_nvs(uid);
-                if (existing != 0 && existing != enroll_emp_id) {
+                if (existing != 0 && existing != enroll_id_snapshot) {
                     ESP_LOGW(TAG, "The RFID da thuoc ID %u", existing);
                     tft_message("THE DA TON TAI", "QUET THE KHAC", "D DE HUY");
                 } else if (!as608_is_online()) {
@@ -462,11 +845,21 @@ static void rfid_task(void *arg)
                     ESP_LOGE(TAG, "AS608 khong phan hoi; chua luu RFID");
                     tft_message("LOI VAN TAY", "KIEM TRA AS608", "QUET LAI THE");
                 } else {
-                    memcpy(enroll_rfid_uid, uid, sizeof(uid));
-                    enroll_rfid_pending = true;
-                    current_enroll_state = ENROLL_WAIT_FINGER_1;
-                    ESP_LOGI(TAG, "RFID OK; AS608 OK. DAT VAN TAY LAN 1");
-                    tft_message("THE RFID OK", "DAT VAN TAY", "LAN 1");
+                    LOCK();
+                    /* Kiểm tra lại trạng thái còn đúng sau các thao tác I/O chậm ở trên
+                     * (tránh ghi đè nếu admin đã bấm D hoặc watchdog đã hủy trong lúc chờ). */
+                    if (current_enroll_state == ENROLL_WAIT_RFID &&
+                        enroll_emp_id == enroll_id_snapshot) {
+                        memcpy(enroll_rfid_uid, uid, sizeof(uid));
+                        enroll_rfid_pending = true;
+                        current_enroll_state = ENROLL_WAIT_FINGER_1;
+                        enroll_started_us = esp_timer_get_time();
+                        UNLOCK();
+                        ESP_LOGI(TAG, "RFID OK; AS608 OK. DAT VAN TAY LAN 1");
+                        tft_message("THE RFID OK", "DAT VAN TAY", "LAN 1");
+                    } else {
+                        UNLOCK();
+                    }
                 }
                 vTaskDelay(pdMS_TO_TICKS(800));
             } else if (attendance_ready()) {
@@ -490,69 +883,156 @@ static void fingerprint_task(void *arg)
     uint8_t reply[32];
     while (true) {
         size_t n = sizeof(reply);
-        if (current_enroll_state == ENROLL_WAIT_FINGER_1) {
+
+        LOCK();
+        enroll_state_t st = current_enroll_state;
+        uint16_t emp_id_snapshot = enroll_emp_id;
+        UNLOCK();
+
+        if (st == ENROLL_WAIT_FINGER_1) {
             if (as608_cmd(0x01, NULL, 0, reply, &n)) {
                 uint8_t buffer = 1; n = sizeof(reply);
                 if (as608_cmd(0x02, &buffer, 1, reply, &n)) {
+                    LOCK();
+                    if (current_enroll_state == ENROLL_WAIT_FINGER_1) {
+                        current_enroll_state = ENROLL_WAIT_FINGER_REMOVE;
+                        enroll_started_us = esp_timer_get_time();
+                    }
+                    UNLOCK();
                     ESP_LOGI(TAG, "Van tay lan 1 OK; nhac tay ra");
-                    current_enroll_state = ENROLL_WAIT_FINGER_REMOVE;
                     tft_message("VAN TAY OK", "NHAC TAY RA", "CHO LAN 2");
                 }
             }
-        } else if (current_enroll_state == ENROLL_WAIT_FINGER_REMOVE) {
-            /* GetImage lỗi khi không còn ngón tay: đó là điều kiện chuyển sang lần 2. */
-            if (!as608_cmd(0x01, NULL, 0, reply, &n)) {
-                current_enroll_state = ENROLL_WAIT_FINGER_2;
+        } else if (st == ENROLL_WAIT_FINGER_REMOVE) {
+            /* Chỉ status 0x02 mới thực sự có nghĩa là đã nhấc tay. */
+            uint8_t status;
+            esp_err_t err = as608_exec(0x01, NULL, 0, reply, &n, &status);
+            if (err == ESP_OK && status == AS608_NO_FINGER) {
+                LOCK();
+                if (current_enroll_state == ENROLL_WAIT_FINGER_REMOVE) {
+                    current_enroll_state = ENROLL_WAIT_FINGER_2;
+                    enroll_started_us = esp_timer_get_time();
+                }
+                UNLOCK();
                 tft_message("DAT LAI", "CUNG NGON TAY", "LAN 2");
                 vTaskDelay(pdMS_TO_TICKS(400));
+            } else if (err != ESP_OK) {
+                ESP_LOGW(TAG, "AS608 loi UART khi cho nhac tay: %s", esp_err_to_name(err));
             }
-        } else if (current_enroll_state == ENROLL_WAIT_FINGER_2) {
+        } else if (st == ENROLL_WAIT_FINGER_2) {
             if (as608_cmd(0x01, NULL, 0, reply, &n)) {
                 uint8_t buffer = 2; n = sizeof(reply);
                 if (!as608_cmd(0x02, &buffer, 1, reply, &n)) goto next;
                 n = sizeof(reply);
                 if (!as608_cmd(0x05, NULL, 0, reply, &n)) {
                     ESP_LOGW(TAG, "Hai lan van tay khong khop");
-                    current_enroll_state = ENROLL_WAIT_FINGER_1;
+                    LOCK();
+                    if (current_enroll_state == ENROLL_WAIT_FINGER_2) {
+                        current_enroll_state = ENROLL_WAIT_FINGER_1;
+                        enroll_started_us = esp_timer_get_time();
+                    }
+                    UNLOCK();
                     tft_message("VAN TAY KHAC", "DAT LAI LAN 1", "THU LAI");
                     goto next;
                 }
-                uint8_t store[] = {1, (uint8_t)(enroll_emp_id >> 8), (uint8_t)enroll_emp_id};
+                uint8_t store[] = {1, (uint8_t)(emp_id_snapshot >> 8), (uint8_t)emp_id_snapshot};
                 n = sizeof(reply);
                 if (!as608_cmd(0x06, store, sizeof(store), reply, &n)) {
                     ESP_LOGE(TAG, "Khong luu duoc template AS608");
                     tft_message("LOI LUU VAN TAY", "THU LAI", "D DE HUY");
                     goto next;
                 }
-                if (!enroll_rfid_pending ||
-                    save_rfid_to_nvs(enroll_rfid_uid, enroll_emp_id) != ESP_OK) {
+
+                bool save_ok;
+                LOCK();
+                save_ok = enroll_rfid_pending &&
+                          save_rfid_to_nvs(enroll_rfid_uid, emp_id_snapshot) == ESP_OK;
+                if (save_ok && current_enroll_state == ENROLL_WAIT_FINGER_2) {
+                    /* Store chỉ xác nhận đã ghi flash, chưa chứng minh Search tìm được.
+                     * Bắt buộc nhấc tay và quét lần 3 để kiểm chứng xác thực thật. */
+                    current_enroll_state = ENROLL_WAIT_VERIFY_REMOVE;
+                    enroll_started_us = esp_timer_get_time();
+                } else if (!save_ok) {
                     ESP_LOGE(TAG, "Template da luu nhung khong ghi duoc RFID vao NVS");
                     enroll_rfid_pending = false;
                     current_enroll_state = ENROLL_NONE;
                     admin_authenticated = false;
+                }
+                UNLOCK();
+
+                if (save_ok) {
+                    tft_message("DA LUU MAU", "NHAC TAY RA", "SE KIEM TRA");
+                } else {
                     tft_message("LOI NVS", "THE CHUA DUOC LUU", "KIEM TRA NVS");
+                }
+            }
+        } else if (st == ENROLL_WAIT_VERIFY_REMOVE) {
+            uint8_t status;
+            esp_err_t err = as608_exec(0x01, NULL, 0, reply, &n, &status);
+            if (err == ESP_OK && status == AS608_NO_FINGER) {
+                LOCK();
+                if (current_enroll_state == ENROLL_WAIT_VERIFY_REMOVE) {
+                    current_enroll_state = ENROLL_WAIT_VERIFY;
+                    enroll_started_us = esp_timer_get_time();
+                }
+                UNLOCK();
+                tft_message("KIEM TRA", "DAT LAI VAN TAY", "LAN 3");
+                vTaskDelay(pdMS_TO_TICKS(400));
+            } else if (err != ESP_OK) {
+                ESP_LOGW(TAG, "AS608 loi UART khi cho xac minh: %s", esp_err_to_name(err));
+            }
+        } else if (st == ENROLL_WAIT_VERIFY) {
+            if (as608_cmd(0x01, NULL, 0, reply, &n)) {
+                uint8_t buffer = 1; n = sizeof(reply);
+                if (!as608_cmd(0x02, &buffer, 1, reply, &n)) {
+                    ESP_LOGW(TAG, "Khong trich xuat duoc dac trung de kiem tra");
                     goto next;
                 }
-                enroll_rfid_pending = false;
-                current_enroll_state = ENROLL_NONE;
-                admin_authenticated = false;
-                ESP_LOGI(TAG, "HOAN TAT: RFID va van tay cua ID %u", enroll_emp_id);
-                tft_message("THEM NHAN VIEN", "HOAN TAT", "SAN SANG");
-                vTaskDelay(pdMS_TO_TICKS(1500));
-                tft_message("CHAM CONG", "SAN SANG", "CHO XAC THUC");
+                uint16_t matched, score;
+                uint8_t status;
+                bool verify_ok = as608_search(&matched, &score, &status) &&
+                                  matched == emp_id_snapshot;
+
+                if (verify_ok) {
+                    LOCK();
+                    if (current_enroll_state == ENROLL_WAIT_VERIFY) {
+                        enroll_rfid_pending = false;
+                        current_enroll_state = ENROLL_NONE;
+                        admin_authenticated = false;
+                    }
+                    UNLOCK();
+                    ESP_LOGI(TAG, "HOAN TAT DA KIEM CHUNG: ID %u, score %u", matched, score);
+                    tft_message("THEM NHAN VIEN", "XAC THUC OK", "SAN SANG");
+                    vTaskDelay(pdMS_TO_TICKS(1500));
+                    tft_message("CHAM CONG", "SAN SANG", "CHO XAC THUC");
+                } else {
+                    /* Không để lại tài khoản có thể đăng ký nhưng không xác thực được. */
+                    ESP_LOGE(TAG, "Kiem chung that bai: status=0x%02X, match=%u, can=%u",
+                             status, matched, emp_id_snapshot);
+                    uint8_t uid_snapshot[RFID_UID_LEN];
+                    LOCK();
+                    memcpy(uid_snapshot, enroll_rfid_uid, RFID_UID_LEN);
+                    enroll_rfid_pending = false;
+                    current_enroll_state = ENROLL_NONE;
+                    admin_authenticated = false;
+                    UNLOCK();
+                    as608_delete_template(emp_id_snapshot);
+                    (void)erase_rfid_from_nvs(uid_snapshot);
+                    tft_message("LOI KIEM CHUNG", "DA HUY DU LIEU", "THU LAI");
+                }
             }
         } else if (attendance_ready()) {
             if (as608_cmd(0x01, NULL, 0, reply, &n)) {
                 uint8_t buffer = 1; n = sizeof(reply);
                 if (as608_cmd(0x02, &buffer, 1, reply, &n)) {
-                    const uint8_t search[] = {1, 0, 0, 0, 0, 0xa3};
-                    n = sizeof(reply);
-                    if (as608_cmd(0x04, search, sizeof(search), reply, &n) && n >= 3) {
-                        uint16_t matched = ((uint16_t)reply[1] << 8) | reply[2];
+                    uint16_t matched, score;
+                    uint8_t status;
+                    if (as608_search(&matched, &score, &status)) {
                         char id[8]; snprintf(id, sizeof(id), "%u", matched);
+                        ESP_LOGI(TAG, "Van tay match ID=%u score=%u", matched, score);
                         log_event("FP", id); grant("FINGER", id);
                     } else {
-                        ESP_LOGW(TAG, "Van tay khong khop");
+                        ESP_LOGW(TAG, "Van tay khong khop (AS608 status=0x%02X)", status);
                     }
                 }
             }
@@ -596,6 +1076,12 @@ static void presence_task(void *arg)
 /* ============================== app_main ============================== */
 void app_main(void)
 {
+    state_mutex = xSemaphoreCreateMutex();
+    if (!state_mutex) {
+        ESP_LOGE(TAG, "Khong tao duoc mutex trang thai - dung lai");
+        abort();
+    }
+
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         ESP_ERROR_CHECK(nvs_flash_erase());
@@ -634,16 +1120,22 @@ void app_main(void)
 
     rc522_init();
     tft_init();
-    ESP_LOGI(TAG, "AS608 %s", as608_is_online() ? "online" : "khong phan hoi");
+    if (as608_is_online()) {
+        as608_read_capacity();
+        ESP_LOGI(TAG, "AS608 online, dung luong template: %u", fp_library_size);
+    } else {
+        ESP_LOGE(TAG, "AS608 khong phan hoi - kiem tra TX/RX, GND va AS608_BAUD");
+    }
 
     xTaskCreate(rfid_task, "rfid", 4096, NULL, 5, NULL);
     xTaskCreate(fingerprint_task, "finger", 4096, NULL, 5, NULL);
     xTaskCreate(keypad_task, "keypad", 3072, NULL, 4, NULL);
     xTaskCreate(cam_task, "cam", 3072, NULL, 5, NULL);
     xTaskCreate(presence_task, "presence", 2048, NULL, 4, NULL);
+    xTaskCreate(enroll_watchdog_task, "enroll_wd", 2048, NULL, 3, NULL);
 
     ESP_LOGI(TAG, "============================================");
     ESP_LOGI(TAG, "KHOI DONG XONG. RFID / VAN TAY SAN SANG.");
-    ESP_LOGI(TAG, "ADMIN: * PIN # | ID B de them | D de thoat");
+    ESP_LOGI(TAG, "ADMIN: * PIN # | B them NV | D xoa NV | C xoa ky tu");
     ESP_LOGI(TAG, "============================================");
 }
