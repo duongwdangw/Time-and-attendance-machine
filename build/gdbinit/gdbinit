@@ -1,0 +1,2 @@
+source D:/DATN/DATN_v4/esp32main/esp32main/build/gdbinit/symbols
+source D:/DATN/DATN_v4/esp32main/esp32main/build/gdbinit/connect

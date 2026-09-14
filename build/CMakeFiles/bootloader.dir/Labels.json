@@ -1,0 +1,43 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "D:/DATN/DATN_v4/esp32main/esp32main/build/CMakeFiles/bootloader"
+		},
+		{
+			"file" : "D:/DATN/DATN_v4/esp32main/esp32main/build/CMakeFiles/bootloader.rule"
+		},
+		{
+			"file" : "D:/DATN/DATN_v4/esp32main/esp32main/build/CMakeFiles/bootloader-complete.rule"
+		},
+		{
+			"file" : "D:/DATN/DATN_v4/esp32main/esp32main/build/bootloader-prefix/src/bootloader-stamp/bootloader-build.rule"
+		},
+		{
+			"file" : "D:/DATN/DATN_v4/esp32main/esp32main/build/bootloader-prefix/src/bootloader-stamp/bootloader-configure.rule"
+		},
+		{
+			"file" : "D:/DATN/DATN_v4/esp32main/esp32main/build/bootloader-prefix/src/bootloader-stamp/bootloader-download.rule"
+		},
+		{
+			"file" : "D:/DATN/DATN_v4/esp32main/esp32main/build/bootloader-prefix/src/bootloader-stamp/bootloader-install.rule"
+		},
+		{
+			"file" : "D:/DATN/DATN_v4/esp32main/esp32main/build/bootloader-prefix/src/bootloader-stamp/bootloader-mkdir.rule"
+		},
+		{
+			"file" : "D:/DATN/DATN_v4/esp32main/esp32main/build/bootloader-prefix/src/bootloader-stamp/bootloader-patch.rule"
+		},
+		{
+			"file" : "D:/DATN/DATN_v4/esp32main/esp32main/build/bootloader-prefix/src/bootloader-stamp/bootloader-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"bootloader"
+		],
+		"name" : "bootloader"
+	}
+}
