@@ -1,0 +1,107 @@
+ets Jul 29 2019 12:21:46
+
+rst:0x1 (POWERON_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7172
+load:0x40078000,len:15632
+ho 0 tail 12 room 4
+load:0x40080400,len:4
+load:0x40080404,len:3904
+entry 0x40080640
+[0;32mI (31) boot: ESP-IDF v5.2.7 2nd stage bootloader[0m
+[0;32mI (31) boot: compile time Sep 15 2026 16:54:00[0m
+[0;32mI (31) boot: Multicore bootloader[0m
+[0;32mI (35) boot: chip revision: v3.1[0m
+[0;32mI (39) boot.esp32: SPI Speed      : 40MHz[0m
+[0;32mI (44) boot.esp32: SPI Mode       : DIO[0m
+[0;32mI (48) boot.esp32: SPI Flash Size : 4MB[0m
+[0;32mI (53) boot: Enabling RNG early entropy source...[0m
+[0;32mI (58) boot: Partition Table:[0m
+[0;32mI (62) boot: ## Label            Usage          Type ST Offset   Length[0m
+[0;32mI (69) boot:  0 nvs              WiFi data        01 02 00009000 00006000[0m
+[0;32mI (77) boot:  1 phy_init         RF data          01 01 0000f000 00001000[0m
+[0;32mI (84) boot:  2 factory          factory app      00 00 00010000 00177000[0m
+[0;32mI (92) boot: End of partition table[0m
+[0;32mI (96) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=1da90h (121488) map[0m
+[0;32mI (146) esp_image: segment 1: paddr=0002dab8 vaddr=3ffb0000 size=02560h (  9568) load[0m
+[0;32mI (150) esp_image: segment 2: paddr=00030020 vaddr=400d0020 size=93c10h (605200) map[0m
+[0;32mI (359) esp_image: segment 3: paddr=000c3c38 vaddr=3ffb2560 size=01e08h (  7688) load[0m
+[0;32mI (362) esp_image: segment 4: paddr=000c5a48 vaddr=40080000 size=1a600h (108032) load[0m
+[0;32mI (420) boot: Loaded app from partition at offset 0x10000[0m
+[0;32mI (420) boot: Disabling RNG early entropy source...[0m
+[0;32mI (432) cpu_start: Multicore app[0m
+[0;32mI (441) cpu_start: Pro cpu start user code[0m
+[0;32mI (441) cpu_start: cpu freq: 240000000 Hz[0m
+[0;32mI (441) cpu_start: Application information:[0m
+[0;32mI (444) cpu_start: Project name:     esp32main[0m
+[0;32mI (450) cpu_start: App version:      e6479e7-dirty[0m
+[0;32mI (455) cpu_start: Compile time:     Sep 15 2026 16:53:47[0m
+[0;32mI (461) cpu_start: ELF file SHA256:  12082723a...[0m
+[0;32mI (466) cpu_start: ESP-IDF:          v5.2.7[0m
+[0;32mI (471) cpu_start: Min chip rev:     v0.0[0m
+[0;32mI (476) cpu_start: Max chip rev:     v3.99 [0m
+[0;32mI (481) cpu_start: Chip rev:         v3.1[0m
+[0;32mI (486) heap_init: Initializing. RAM available for dynamic allocation:[0m
+[0;32mI (493) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM[0m
+[0;32mI (499) heap_init: At 3FFC2AC8 len 0001D538 (117 KiB): DRAM[0m
+[0;32mI (505) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM[0m
+[0;32mI (511) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM[0m
+[0;32mI (518) heap_init: At 4009A600 len 00005A00 (22 KiB): IRAM[0m
+[0;32mI (526) spi_flash: detected chip: generic[0m
+[0;32mI (529) spi_flash: flash io: dio[0m
+[0;32mI (534) main_task: Started on CPU0[0m
+[0;32mI (538) main_task: Calling app_main()[0m
+[0;32mI (562) ACCESS: Khoi tao Wi-Fi + NTP...[0m
+[0;32mI (566) wifi:wifi driver task: 3ffcacf8, prio:23, stack:6656, core=0[0m
+[0;32mI (576) wifi:wifi firmware version: ff41b26[0m
+[0;32mI (576) wifi:wifi certification version: v7.0[0m
+[0;32mI (576) wifi:config NVS flash: enabled[0m
+[0;32mI (576) wifi:config nano formating: disabled[0m
+[0;32mI (581) wifi:Init data frame dynamic rx buffer num: 32[0m
+[0;32mI (585) wifi:Init static rx mgmt buffer num: 5[0m
+[0;32mI (589) wifi:Init management short buffer num: 32[0m
+[0;32mI (594) wifi:Init dynamic tx buffer num: 32[0m
+[0;32mI (598) wifi:Init static rx buffer size: 1600[0m
+[0;32mI (602) wifi:Init static rx buffer num: 10[0m
+[0;32mI (606) wifi:Init dynamic rx buffer num: 32[0m
+[0;32mI (611) wifi_init: rx ba win: 6[0m
+[0;32mI (613) wifi_init: tcpip mbox: 32[0m
+[0;32mI (617) wifi_init: udp mbox: 6[0m
+[0;32mI (621) wifi_init: tcp mbox: 6[0m
+[0;32mI (625) wifi_init: tcp tx win: 5760[0m
+[0;32mI (629) wifi_init: tcp rx win: 5760[0m
+[0;32mI (633) wifi_init: tcp mss: 1440[0m
+[0;32mI (637) wifi_init: WiFi IRAM OP enabled[0m
+[0;32mI (642) wifi_init: WiFi RX IRAM OP enabled[0m
+[0;33mW (647) wifi:Password length matches WPA2 standards, authmode threshold changes from OPEN to WPA2[0m
+[0;32mI (713) phy_init: phy_version 4863,a3a4459,Oct 28 2025,14:30:06[0m
+[0;32mI (788) phy_init: Saving new calibration data due to checksum failure or outdated calibration data, mode(0)[0m
+[0;32mI (804) wifi:mode : sta (00:70:07:1a:13:c0)[0m
+[0;32mI (805) wifi:enable tsf[0m
+[0;32mI (807) ACCESS: Dang ket noi Wi-Fi: Của mình Đăng ok ?[0m
+[0;32mI (2083) wifi:new:<10,2>, old:<1,0>, ap:<255,255>, sta:<10,2>, prof:1[0m
+[0;32mI (2085) wifi:state: init -> auth (b0)[0m
+[0;32mI (2090) wifi:state: auth -> assoc (0)[0m
+[0;32mI (2109) wifi:state: assoc -> run (10)[0m
+[0;32mI (2121) wifi:connected with Của mình Đăng ok ?, aid = 3, channel 10, 40D, bssid = c8:3a:35:93:8c:c0[0m
+[0;32mI (2122) wifi:security: WPA2-PSK, phy: bgn, rssi: -54, cipher(pairwise:0x3, group:0x3), pmf:0[0m
+[0;32mI (2178) wifi:pm start, type: 1[0m
+
+[0;32mI (2178) wifi:dp: 1, bi: 102400, li: 3, scale listen interval from 307200 us to 307200 us[0m
+[0;32mI (2179) wifi:AP's beacon interval = 102400 us, DTIM period = 1[0m
+[0;32mI (5191) esp_netif_handlers: sta ip: 192.168.0.103, mask: 255.255.255.0, gw: 192.168.0.1[0m
+[0;32mI (5192) ACCESS: Wi-Fi OK, IP: 192.168.0.103[0m
+[0;32mI (5194) wifi:<ba-add>idx:0 (ifx:0, c8:3a:35:93:8c:c0), tid:0, ssn:2, winSize:64[0m
+[0;32mI (7674) ACCESS: NTP: DA DONG BO THOI GIAN[0m
+[0;32mI (7703) ACCESS: Gio Viet Nam: 09:04:57 21/09/2026[0m
+[0;32mI (7704) gpio: GPIO[35]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 [0m
+[0;32mI (7760) gpio: GPIO[2]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 [0m
+[0;32mI (8056) ACCESS: AS608 online, dung luong template: 300[0m
+[0;32mI (8058) ACCESS: LD2410C presence=1[0m
+[0;32mI (8060) ACCESS: ============================================[0m
+[0;32mI (8062) ACCESS: HE THONG DA SAN SANG.[0m
+[0;32mI (8066) ACCESS: ADMIN: * | A chuyen | B quay lai/xoa | C chon/xac nhan | # ve cham cong[0m
+[0;32mI (8075) ACCESS: ============================================[0m
+[0;32mI (8081) main_task: Returned from app_main()[0m
