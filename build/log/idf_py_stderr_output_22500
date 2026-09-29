@@ -1,0 +1,37 @@
+[0;33m--- Warning: GDB cannot open serial ports accessed as COMx[0m
+[0;33m--- Using \\.\COM12 instead...[0m
+[0;33m--- esp-idf-monitor 1.9.0 on \\.\COM12 115200[0m
+[0;33m--- Quit: Ctrl+] | Menu: Ctrl+T | Help: Ctrl+T followed by Ctrl+H[0m
+[0m--- 0x40080400: [0;33m_init[0m[0m at [0;32m??[0m[0m:[1;31m?[0m
+[0m--- 0x40080400: [0;33m_init[0m[0m at [0;32m??[0m[0m:[1;31m?[0m
+[0m--- 0x4000c2e4: [0;33mmemcpy[0m[0m in [0;32mROM[0m
+[0m--- 0x4000c2e0: [0;33mmemcpy[0m[0m in [0;32mROM[0m
+[0m--- 0x4000c2f6: [0;33mmemcpy[0m[0m in [0;32mROM[0m
+[0m--- 0x4000c2e1: [0;33mmemcpy[0m[0m in [0;32mROM[0m
+[0m--- 0x40084160: [0;33muninstall_priv_desc[0m[0m at [0;32mE:/Espressif/frameworks/esp-idf-v5.2.7/components/driver/spi/gpspi/spi_master.c[0m[0m:[1;31m869[0m
+[0m--- 0x400deca1: [0;33mspi_device_get_trans_result[0m[0m at [0;32mE:/Espressif/frameworks/esp-idf-v5.2.7/components/driver/spi/gpspi/spi_master.c[0m[0m:[1;31m1016[0m
+[0m--- 0x400deccd: [0;33mspi_device_transmit[0m[0m at [0;32mE:/Espressif/frameworks/esp-idf-v5.2.7/components/driver/spi/gpspi/spi_master.c[0m[0m:[1;31m1032[0m
+[0m--- 0x400d9ae1: [0;33mrcr[0m[0m at [0;32mD:/DATN/DATN_v4/esp32main/esp32main/main/main.c[0m[0m:[1;31m1947[0m
+[0m--- 0x400d9b0d: [0;33mrclr[0m[0m at [0;32mD:/DATN/DATN_v4/esp32main/esp32main/main/main.c[0m[0m:[1;31m1959[0m
+[0m--- 0x400d9bae: [0;33mrc522_xfer_bits[0m[0m at [0;32mD:/DATN/DATN_v4/esp32main/esp32main/main/main.c[0m[0m:[1;31m2000[0m
+[0m--- 0x400d9c38: [0;33mrc522_poll[0m[0m at [0;32mD:/DATN/DATN_v4/esp32main/esp32main/main/main.c[0m[0m:[1;31m2020[0m
+[0m--- 0x400d9cb9: [0;33mrfid_task[0m[0m at [0;32mD:/DATN/DATN_v4/esp32main/esp32main/main/main.c[0m[0m:[1;31m2553[0m
+[0m--- 0x4008c4b1: [0;33mvPortTaskWrapper[0m[0m at [0;32mE:/Espressif/frameworks/esp-idf-v5.2.7/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c[0m[0m:[1;31m139[0m
+[0m--- 0x40080400: [0;33m_init[0m[0m at [0;32m??[0m[0m:[1;31m?[0m
+[0m--- 0x400d9aa5: [0;33mwcr[0m[0m at [0;32mD:/DATN/DATN_v4/esp32main/esp32main/main/main.c[0m[0m:[1;31m1955[0m
+[0m--- 0x40081a7a: [0;33mpanic_abort[0m[0m at [0;32mE:/Espressif/frameworks/esp-idf-v5.2.7/components/esp_system/panic.c[0m[0m:[1;31m482[0m
+[0m--- 0x4008b8e9: [0;33mesp_system_abort[0m[0m at [0;32mE:/Espressif/frameworks/esp-idf-v5.2.7/components/esp_system/port/esp_system_chip.c[0m[0m:[1;31m93[0m
+[0m--- 0x4008c85e: [0;33mvApplicationStackOverflowHook[0m[0m at [0;32mE:/Espressif/frameworks/esp-idf-v5.2.7/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c[0m[0m:[1;31m563[0m
+[0m--- 0x4008db57: [0;33mvTaskSwitchContext[0m[0m at [0;32mE:/Espressif/frameworks/esp-idf-v5.2.7/components/freertos/FreeRTOS-Kernel/tasks.c[0m[0m:[1;31m3652[0m
+[0m--- 0x4008c968: [0;33m_frxt_dispatch[0m[0m at [0;32mE:/Espressif/frameworks/esp-idf-v5.2.7/components/freertos/FreeRTOS-Kernel/portable/xtensa/portasm.S[0m[0m:[1;31m451[0m
+[0m--- 0x4008c91a: [0;33m_frxt_int_exit[0m[0m at [0;32mE:/Espressif/frameworks/esp-idf-v5.2.7/components/freertos/FreeRTOS-Kernel/portable/xtensa/portasm.S[0m[0m:[1;31m246[0m
+[0m--- 0x40080400: [0;33m_init[0m[0m at [0;32m??[0m[0m:[1;31m?[0m
+[0m--- 0x40081a7a: [0;33mpanic_abort[0m[0m at [0;32mE:/Espressif/frameworks/esp-idf-v5.2.7/components/esp_system/panic.c[0m[0m:[1;31m482[0m
+[0m--- 0x4008b8e9: [0;33mesp_system_abort[0m[0m at [0;32mE:/Espressif/frameworks/esp-idf-v5.2.7/components/esp_system/port/esp_system_chip.c[0m[0m:[1;31m93[0m
+[0m--- 0x4008c85e: [0;33mvApplicationStackOverflowHook[0m[0m at [0;32mE:/Espressif/frameworks/esp-idf-v5.2.7/components/freertos/FreeRTOS-Kernel/portable/xtensa/port.c[0m[0m:[1;31m563[0m
+[0m--- 0x4008db57: [0;33mvTaskSwitchContext[0m[0m at [0;32mE:/Espressif/frameworks/esp-idf-v5.2.7/components/freertos/FreeRTOS-Kernel/tasks.c[0m[0m:[1;31m3652[0m
+[0m--- 0x4008c968: [0;33m_frxt_dispatch[0m[0m at [0;32mE:/Espressif/frameworks/esp-idf-v5.2.7/components/freertos/FreeRTOS-Kernel/portable/xtensa/portasm.S[0m[0m:[1;31m451[0m
+[0m--- 0x4008c91a: [0;33m_frxt_int_exit[0m[0m at [0;32mE:/Espressif/frameworks/esp-idf-v5.2.7/components/freertos/FreeRTOS-Kernel/portable/xtensa/portasm.S[0m[0m:[1;31m246[0m
+[0m--- 0x40174214: [0;33mmbedtls_mpi_core_sub[0m[0m at [0;32mE:/Espressif/frameworks/esp-idf-v5.2.7/components/mbedtls/mbedtls/library/bignum_core.c[0m[0m:[1;31m455[0m
+[0m--- 0x40080400: [0;33m_init[0m[0m at [0;32m??[0m[0m:[1;31m?[0m
+[0m

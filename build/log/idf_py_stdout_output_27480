@@ -1,0 +1,245 @@
+ets Jul 29 2019 12:21:46
+
+rst:0x1 (POWERON_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7172
+load:0x40078000,len:15632
+ho 0 tail 12 room 4
+load:0x40080400,len:4
+load:0x40080404,len:3904
+entry 0x40080640
+[0;32mI (31) boot: ESP-IDF v5.2.7 2nd stage bootloader[0m
+[0;32mI (31) boot: compile time Sep 25 2026 08:04:29[0m
+[0;32mI (31) boot: Multicore bootloader[0m
+[0;32mI (35) boot: chip revision: v3.1[0m
+[0;32mI (39) boot.esp32: SPI Speed      : 40MHz[0m
+[0;32mI (44) boot.esp32: SPI Mode       : DIO[0m
+[0;32mI (48) boot.esp32: SPI Flash Size : 4MB[0m
+[0;32mI (53) boot: Enabling RNG early entropy source...[0m
+[0;32mI (58) boot: Partition Table:[0m
+[0;32mI (62) boot: ## Label            Usage          Type ST Offset   Length[0m
+[0;32mI (69) boot:  0 nvs              WiFi data        01 02 00009000 00006000[0m
+[0;32mI (77) boot:  1 phy_init         RF data          01 01 0000f000 00001000[0m
+[0;32mI (84) boot:  2 factory          factory app      00 00 00010000 00177000[0m
+[0;32mI (92) boot: End of partition table[0m
+[0;32mI (96) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=32c28h (207912) map[0m
+[0;32mI (176) esp_image: segment 1: paddr=00042c50 vaddr=3ffb0000 size=04368h ( 17256) load[0m
+[0;32mI (182) esp_image: segment 2: paddr=00046fc0 vaddr=40080000 size=09058h ( 36952) load[0m
+[0;32mI (197) esp_image: segment 3: paddr=00050020 vaddr=400d0020 size=ace3ch (708156) map[0m
+[0;32mI (440) esp_image: segment 4: paddr=000fce64 vaddr=40089058 size=115a8h ( 71080) load[0m
+[0;32mI (481) boot: Loaded app from partition at offset 0x10000[0m
+[0;32mI (481) boot: Disabling RNG early entropy source...[0m
+[0;32mI (493) cpu_start: Multicore app[0m
+[0;32mI (502) cpu_start: Pro cpu start user code[0m
+[0;32mI (502) cpu_start: cpu freq: 240000000 Hz[0m
+[0;32mI (502) cpu_start: Application information:[0m
+[0;32mI (505) cpu_start: Project name:     esp32main[0m
+[0;32mI (510) cpu_start: App version:      89470fa-dirty[0m
+[0;32mI (516) cpu_start: Compile time:     Sep 25 2026 08:04:13[0m
+[0;32mI (522) cpu_start: ELF file SHA256:  a85a1ee12...[0m
+[0;32mI (527) cpu_start: ESP-IDF:          v5.2.7[0m
+[0;32mI (532) cpu_start: Min chip rev:     v0.0[0m
+[0;32mI (537) cpu_start: Max chip rev:     v3.99 [0m
+[0;32mI (542) cpu_start: Chip rev:         v3.1[0m
+[0;32mI (547) heap_init: Initializing. RAM available for dynamic allocation:[0m
+[0;32mI (554) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM[0m
+[0;32mI (560) heap_init: At 3FFC2BD0 len 0001D430 (117 KiB): DRAM[0m
+[0;32mI (566) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM[0m
+[0;32mI (572) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM[0m
+[0;32mI (579) heap_init: At 4009A600 len 00005A00 (22 KiB): IRAM[0m
+[0;32mI (586) spi_flash: detected chip: generic[0m
+[0;32mI (589) spi_flash: flash io: dio[0m
+[0;32mI (594) main_task: Started on CPU0[0m
+[0;32mI (598) main_task: Calling app_main()[0m
+[0;32mI (622) WIFI_TIME: Initializing Wi-Fi + NTP...[0m
+[0;32mI (626) wifi:wifi driver task: 3ffcae00, prio:23, stack:6656, core=0[0m
+[0;32mI (636) wifi:wifi firmware version: ff41b26[0m
+[0;32mI (636) wifi:wifi certification version: v7.0[0m
+[0;32mI (637) wifi:config NVS flash: enabled[0m
+[0;32mI (637) wifi:config nano formating: disabled[0m
+[0;32mI (641) wifi:Init data frame dynamic rx buffer num: 32[0m
+[0;32mI (646) wifi:Init static rx mgmt buffer num: 5[0m
+[0;32mI (650) wifi:Init management short buffer num: 32[0m
+[0;32mI (654) wifi:Init dynamic tx buffer num: 32[0m
+[0;32mI (658) wifi:Init static rx buffer size: 1600[0m
+[0;32mI (662) wifi:Init static rx buffer num: 10[0m
+[0;32mI (666) wifi:Init dynamic rx buffer num: 32[0m
+[0;32mI (671) wifi_init: rx ba win: 6[0m
+[0;32mI (674) wifi_init: tcpip mbox: 32[0m
+[0;32mI (678) wifi_init: udp mbox: 6[0m
+[0;32mI (681) wifi_init: tcp mbox: 6[0m
+[0;32mI (685) wifi_init: tcp tx win: 5760[0m
+[0;32mI (689) wifi_init: tcp rx win: 5760[0m
+[0;32mI (693) wifi_init: tcp mss: 1440[0m
+[0;32mI (697) wifi_init: WiFi IRAM OP enabled[0m
+[0;32mI (702) wifi_init: WiFi RX IRAM OP enabled[0m
+[0;33mW (708) wifi:Password length matches WPA2 standards, authmode threshold changes from OPEN to WPA2[0m
+[0;32mI (716) phy_init: phy_version 4863,a3a4459,Oct 28 2025,14:30:06[0m
+[0;32mI (801) wifi:mode : sta (00:70:07:1a:13:c0)[0m
+[0;32mI (802) wifi:enable tsf[0m
+[0;32mI (805) WIFI_TIME: Connecting to Wi-Fi: Hai Dang[0m
+[0;32mI (902) wifi:new:<13,0>, old:<1,0>, ap:<255,255>, sta:<13,0>, prof:1[0m
+[0;32mI (904) wifi:state: init -> auth (b0)[0m
+[0;32mI (910) wifi:state: auth -> assoc (0)[0m
+[0;32mI (931) wifi:state: assoc -> run (10)[0m
+[0;32mI (939) wifi:<ba-add>idx:0 (ifx:0, 24:0b:2a:53:3c:39), tid:5, ssn:0, winSize:64[0m
+[0;32mI (1039) wifi:connected with Hai Dang, aid = 4, channel 13, BW20, bssid = 24:0b:2a:53:3c:39[0m
+[0;32mI (1040) wifi:security: WPA2-PSK, phy: bgn, rssi: -38, cipher(pairwise:0x3, group:0x3), pmf:0[0m
+[0;32mI (1047) wifi:pm start, type: 1[0m
+
+[0;32mI (1048) wifi:dp: 1, bi: 102400, li: 3, scale listen interval from 307200 us to 307200 us[0m
+[0;32mI (1057) wifi:<ba-add>idx:1 (ifx:0, 24:0b:2a:53:3c:39), tid:0, ssn:2, winSize:64[0m
+[0;32mI (1103) wifi:AP's beacon interval = 102400 us, DTIM period = 1[0m
+[0;32mI (2067) esp_netif_handlers: sta ip: 192.168.1.5, mask: 255.255.255.0, gw: 192.168.1.1[0m
+[0;32mI (2068) WIFI_TIME: Wi-Fi OK, IP: 192.168.1.5[0m
+[0;31mE (17321) WIFI_TIME: NTP: TIMEOUT, time not synced[0m
+[0;31mE (17321) WIFI_TIME: Skipping NTP because time sync failed[0m
+[0;32mI (17322) GSHEET: Google Sheet logging task started[0m
+[0;32mI (17327) gpio: GPIO[35]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 [0m
+[0;32mI (17391) gpio: GPIO[2]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 [0m
+[0;32mI (17688) ACCESS: AS608 online, template capacity: 300[0m
+[0;32mI (17690) ACCESS: LD2410C presence=1[0m
+[0;32mI (17692) ACCESS: ============================================[0m
+[0;32mI (17694) ACCESS: SYSTEM READY.[0m
+[0;32mI (17698) ACCESS: ADMIN: * | A:switch | B:back/delete | C:select/confirm | #:back to attendance[0m
+[0;32mI (17707) ACCESS: ============================================[0m
+[0;32mI (17714) main_task: Returned from app_main()[0m
+ets Jul 29 2019 12:21:46
+
+rst:0x1 (POWERON_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:7172
+load:0x40078000,len:15632
+ho 0 tail 12 room 4
+load:0x40080400,len:4
+load:0x40080404,len:3904
+entry 0x40080640
+[0;32mI (31) boot: ESP-IDF v5.2.7 2nd stage bootloader[0m
+[0;32mI (31) boot: compile time Sep 25 2026 08:04:29[0m
+[0;32mI (31) boot: Multicore bootloader[0m
+[0;32mI (35) boot: chip revision: v3.1[0m
+[0;32mI (39) boot.esp32: SPI Speed      : 40MHz[0m
+[0;32mI (44) boot.esp32: SPI Mode       : DIO[0m
+[0;32mI (48) boot.esp32: SPI Flash Size : 4MB[0m
+[0;32mI (53) boot: Enabling RNG early entropy source...[0m
+[0;32mI (58) boot: Partition Table:[0m
+[0;32mI (62) boot: ## Label            Usage          Type ST Offset   Length[0m
+[0;32mI (69) boot:  0 nvs              WiFi data        01 02 00009000 00006000[0m
+[0;32mI (77) boot:  1 phy_init         RF data          01 01 0000f000 00001000[0m
+[0;32mI (84) boot:  2 factory          factory app      00 00 00010000 00177000[0m
+[0;32mI (92) boot: End of partition table[0m
+[0;32mI (96) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=32c28h (207912) map[0m
+[0;32mI (176) esp_image: segment 1: paddr=00042c50 vaddr=3ffb0000 size=04368h ( 17256) load[0m
+[0;32mI (182) esp_image: segment 2: paddr=00046fc0 vaddr=40080000 size=09058h ( 36952) load[0m
+[0;32mI (197) esp_image: segment 3: paddr=00050020 vaddr=400d0020 size=ace3ch (708156) map[0m
+[0;32mI (440) esp_image: segment 4: paddr=000fce64 vaddr=40089058 size=115a8h ( 71080) load[0m
+[0;32mI (481) boot: Loaded app from partition at offset 0x10000[0m
+[0;32mI (481) boot: Disabling RNG early entropy source...[0m
+[0;32mI (493) cpu_start: Multicore app[0m
+[0;32mI (502) cpu_start: Pro cpu start user code[0m
+[0;32mI (502) cpu_start: cpu freq: 240000000 Hz[0m
+[0;32mI (502) cpu_start: Application information:[0m
+[0;32mI (505) cpu_start: Project name:     esp32main[0m
+[0;32mI (510) cpu_start: App version:      89470fa-dirty[0m
+[0;32mI (516) cpu_start: Compile time:     Sep 25 2026 08:04:13[0m
+[0;32mI (522) cpu_start: ELF file SHA256:  a85a1ee12...[0m
+[0;32mI (527) cpu_start: ESP-IDF:          v5.2.7[0m
+[0;32mI (532) cpu_start: Min chip rev:     v0.0[0m
+[0;32mI (537) cpu_start: Max chip rev:     v3.99 [0m
+[0;32mI (542) cpu_start: Chip rev:         v3.1[0m
+[0;32mI (547) heap_init: Initializing. RAM available for dynamic allocation:[0m
+[0;32mI (554) heap_init: At 3FFAE6E0 len 00001920 (6 KiB): DRAM[0m
+[0;32mI (560) heap_init: At 3FFC2BD0 len 0001D430 (117 KiB): DRAM[0m
+[0;32mI (566) heap_init: At 3FFE0440 len 00003AE0 (14 KiB): D/IRAM[0m
+[0;32mI (572) heap_init: At 3FFE4350 len 0001BCB0 (111 KiB): D/IRAM[0m
+[0;32mI (579) heap_init: At 4009A600 len 00005A00 (22 KiB): IRAM[0m
+[0;32mI (586) spi_flash: detected chip: generic[0m
+[0;32mI (589) spi_flash: flash io: dio[0m
+[0;32mI (594) main_task: Started on CPU0[0m
+[0;32mI (598) main_task: Calling app_main()[0m
+[0;32mI (622) WIFI_TIME: Initializing Wi-Fi + NTP...[0m
+[0;32mI (626) wifi:wifi driver task: 3ffcae00, prio:23, stack:6656, core=0[0m
+[0;32mI (636) wifi:wifi firmware version: ff41b26[0m
+[0;32mI (636) wifi:wifi certification version: v7.0[0m
+[0;32mI (637) wifi:config NVS flash: enabled[0m
+[0;32mI (637) wifi:config nano formating: disabled[0m
+[0;32mI (641) wifi:Init data frame dynamic rx buffer num: 32[0m
+[0;32mI (646) wifi:Init static rx mgmt buffer num: 5[0m
+[0;32mI (650) wifi:Init management short buffer num: 32[0m
+[0;32mI (654) wifi:Init dynamic tx buffer num: 32[0m
+[0;32mI (658) wifi:Init static rx buffer size: 1600[0m
+[0;32mI (662) wifi:Init static rx buffer num: 10[0m
+[0;32mI (666) wifi:Init dynamic rx buffer num: 32[0m
+[0;32mI (671) wifi_init: rx ba win: 6[0m
+[0;32mI (674) wifi_init: tcpip mbox: 32[0m
+[0;32mI (678) wifi_init: udp mbox: 6[0m
+[0;32mI (681) wifi_init: tcp mbox: 6[0m
+[0;32mI (685) wifi_init: tcp tx win: 5760[0m
+[0;32mI (689) wifi_init: tcp rx win: 5760[0m
+[0;32mI (693) wifi_init: tcp mss: 1440[0m
+[0;32mI (697) wifi_init: WiFi IRAM OP enabled[0m
+[0;32mI (702) wifi_init: WiFi RX IRAM OP enabled[0m
+[0;33mW (708) wifi:Password length matches WPA2 standards, authmode threshold changes from OPEN to WPA2[0m
+[0;32mI (716) phy_init: phy_version 4863,a3a4459,Oct 28 2025,14:30:06[0m
+[0;32mI (799) wifi:mode : sta (00:70:07:1a:13:c0)[0m
+[0;32mI (800) wifi:enable tsf[0m
+[0;32mI (803) WIFI_TIME: Connecting to Wi-Fi: Hai Dang[0m
+[0;32mI (906) wifi:new:<13,0>, old:<1,0>, ap:<255,255>, sta:<13,0>, prof:1[0m
+[0;32mI (908) wifi:state: init -> auth (b0)[0m
+[0;32mI (914) wifi:state: auth -> assoc (0)[0m
+[0;32mI (929) wifi:state: assoc -> run (10)[0m
+[0;32mI (932) wifi:<ba-add>idx:0 (ifx:0, 24:0b:2a:53:3c:39), tid:5, ssn:0, winSize:64[0m
+[0;32mI (1031) wifi:connected with Hai Dang, aid = 4, channel 13, BW20, bssid = 24:0b:2a:53:3c:39[0m
+[0;32mI (1032) wifi:security: WPA2-PSK, phy: bgn, rssi: -41, cipher(pairwise:0x3, group:0x3), pmf:0[0m
+[0;32mI (1040) wifi:pm start, type: 1[0m
+
+[0;32mI (1040) wifi:dp: 1, bi: 102400, li: 3, scale listen interval from 307200 us to 307200 us[0m
+[0;32mI (1107) wifi:AP's beacon interval = 102400 us, DTIM period = 1[0m
+[0;32mI (2053) esp_netif_handlers: sta ip: 192.168.1.5, mask: 255.255.255.0, gw: 192.168.1.1[0m
+[0;32mI (2054) WIFI_TIME: Wi-Fi OK, IP: 192.168.1.5[0m
+[0;32mI (3158) wifi:<ba-add>idx:1 (ifx:0, 24:0b:2a:53:3c:39), tid:0, ssn:4, winSize:64[0m
+[0;32mI (4636) WIFI_TIME: NTP: time synchronized[0m
+[0;32mI (4808) WIFI_TIME: Local time: 14:48:53 25/09/2026[0m
+[0;32mI (4809) GSHEET: Google Sheet logging task started[0m
+[0;32mI (4809) gpio: GPIO[35]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 [0m
+[0;32mI (4871) gpio: GPIO[2]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 [0m
+[0;32mI (5168) ACCESS: AS608 online, template capacity: 300[0m
+[0;32mI (5170) ACCESS: LD2410C presence=1[0m
+[0;32mI (5172) ACCESS: ============================================[0m
+[0;32mI (5174) ACCESS: SYSTEM READY.[0m
+[0;32mI (5177) ACCESS: ADMIN: * | A:switch | B:back/delete | C:select/confirm | #:back to attendance[0m
+[0;32mI (5187) ACCESS: ============================================[0m
+[0;32mI (5193) main_task: Returned from app_main()[0m
+[0;32mI (59697) ACCESS: RFID OK; AS608 OK. Place finger 1st time[0m
+[0;32mI (63789) ACCESS: Fingerprint 1 OK; lift finger[0m
+[0;32mI (69819) ACCESS: Admin idle for 10s -> back to attendance mode[0m
+[0;33mW (71078) ACCESS: Fingerprint no match (AS608 status=0x09)[0m
+[0;33mW (72582) ACCESS: Fingerprint no match (AS608 status=0x09)[0m
+[0;33mW (74333) ACCESS: Fingerprint no match (AS608 status=0x09)[0m
+[0;33mW (75788) ACCESS: Fingerprint no match (AS608 status=0x09)[0m
+[0;32mI (112883) ACCESS: RFID OK; AS608 OK. Place finger 1st time[0m
+[0;32mI (117642) ACCESS: Fingerprint 1 OK; lift finger[0m
+[0;32mI (120353) ACCESS: Admin idle for 10s -> back to attendance mode[0m
+[0;33mW (121069) ACCESS: Fingerprint no match (AS608 status=0x09)[0m
+[0;33mW (122592) ACCESS: Fingerprint no match (AS608 status=0x09)[0m
+[0;33mW (124307) ACCESS: Fingerprint no match (AS608 status=0x09)[0m
+[0;32mI (143697) ACCESS: RFID OK; AS608 OK. Place finger 1st time[0m
+[0;32mI (146462) ACCESS: Fingerprint 1 OK; lift finger[0m
+[0;32mI (151035) ACCESS: VERIFICATION COMPLETE: ID 101, score 362[0m
+[0;33mW (153314) ACCESS: Fingerprint no match (AS608 status=0x17)[0m
+[0;32mI (155487) ACCESS: Fingerprint match ID=101 score=244[0m
+[0;32mI (155491) ACCESS: === AUTHENTICATION SUCCESSFUL! FINGER, ID: 101 ===[0m
+[0;32mI (156657) esp-x509-crt-bundle: Certificate validated[0m
+[0;33mW (157836) GSHEET: HTTP status 404, body: [0m
+[0;32mI (158565) ACCESS: Fingerprint match ID=101 score=373[0m
+[0;32mI (158569) ACCESS: === AUTHENTICATION SUCCESSFUL! FINGER, ID: 101 ===[0m
+[0;32mI (159711) esp-x509-crt-bundle: Certificate validated[0m
+[0;33mW (160907) GSHEET: HTTP status 404, body: [0m
+[0;32mI (172451) ACCESS: Fingerprint match ID=101 score=260[0m
+[0;32mI (172455) ACCESS: === AUTHENTICATION SUCCESSFUL! FINGER, ID: 101 ===[0m
+[0;32mI (173599) esp-x509-crt-bundle: Certificate validated[0m
+[0;33mW (174730) GSHEET: HTTP status 404, body: [0m

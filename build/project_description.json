@@ -1,7 +1,7 @@
 {
     "version":            "1.2",
     "project_name":       "esp32main",
-    "project_version":    "e6479e7-dirty",
+    "project_version":    "89470fa-dirty",
     "project_path":       "D:/DATN/DATN_v4/esp32main/esp32main",
     "idf_path":           "E:/Espressif/frameworks/esp-idf-v5.2.7",
     "build_dir":          "D:/DATN/DATN_v4/esp32main/esp32main/build",
@@ -815,12 +815,12 @@
             "dir": "D:/DATN/DATN_v4/esp32main/esp32main/main",
             "type": "LIBRARY",
             "lib": "__idf_main",
-            "reqs": [ "esp_wifi", "esp_event", "esp_netif", "nvs_flash", "lwip", "driver", "esp_timer", "esp_lcd" ],
+            "reqs": [ "esp_wifi", "esp_event", "esp_netif", "nvs_flash", "lwip", "driver", "esp_timer", "esp_lcd", "esp_http_client", "esp-tls", "mbedtls" ],
             "priv_reqs": [],
             "managed_reqs": [],
             "managed_priv_reqs": [],
             "file": "D:/DATN/DATN_v4/esp32main/esp32main/build/esp-idf/main/libmain.a",
-            "sources": [ "D:/DATN/DATN_v4/esp32main/esp32main/main/main.c", "D:/DATN/DATN_v4/esp32main/esp32main/main/wifi_time.c" ],
+            "sources": [ "D:/DATN/DATN_v4/esp32main/esp32main/main/main.c", "D:/DATN/DATN_v4/esp32main/esp32main/main/wifi_time.c", "D:/DATN/DATN_v4/esp32main/esp32main/main/google_sheet.c" ],
             "include_dirs": [ "." ]
         },
         "mbedtls": {
@@ -2139,7 +2139,7 @@
             "prefix": "idf",
             "dir": "D:/DATN/DATN_v4/esp32main/esp32main/main",
             "lib": "__idf_main",
-            "reqs": [ "esp_wifi", "esp_event", "esp_netif", "nvs_flash", "lwip", "driver", "esp_timer", "esp_lcd" ],
+            "reqs": [ "esp_wifi", "esp_event", "esp_netif", "nvs_flash", "lwip", "driver", "esp_timer", "esp_lcd", "esp_http_client", "esp-tls", "mbedtls" ],
             "priv_reqs": [],
             "managed_reqs": [],
             "managed_priv_reqs": [],

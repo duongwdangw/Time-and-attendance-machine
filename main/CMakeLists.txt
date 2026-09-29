@@ -2,6 +2,7 @@ idf_component_register(
     SRCS
         "main.c"
         "wifi_time.c"
+        "google_sheet.c"
 
     INCLUDE_DIRS
         "."
@@ -15,4 +16,7 @@ idf_component_register(
         driver
         esp_timer
         esp_lcd
+        esp_http_client
+        esp-tls
+        mbedtls
 )
